@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Battle Zone | Gaming Portal</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      padding: 20px; font-family: Arial, sans-serif; color: white;
+      background: radial-gradient(ellipse at top, #49200d, #111 55%, #070707);
+    }
+    .panel {
+      width: 100%; max-width: 410px; padding: 30px;
+      background: #151515; border: 1px solid #733514;
+      border-radius: 18px; box-shadow: 0 15px 60px #0009;
+    }
+    h1 { text-align: center; color: #ff7a18; margin: 0 0 8px; }
+    .sub { text-align: center; color: #aaa; margin-bottom: 25px; }
+    label { display: block; margin: 15px 0 7px; color: #ddd; }
+    input {
+      width: 100%; padding: 13px; border-radius: 8px;
+      border: 1px solid #444; background: #222; color: white;
+      font-size: 16px;
+    }
+    input:focus { outline: 2px solid #ff7a18; }
+    button {
+      width: 100%; margin-top: 18px; padding: 13px;
+      border: 0; border-radius: 8px; cursor: pointer;
+      background: #ff7a18; color: #111; font-size: 16px;
+      font-weight: bold;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    .switch { text-align: center; color: #bbb; margin-top: 20px; }
+    .switch button { background: none; color: #ff9a45; width: auto; padding: 4px; }
+    #message { color: #ffb16f; line-height: 1.5; overflow-wrap: anywhere; }
+    .hidden { display: none; }
+    .note { color: #999; font-size: 12px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <main class="panel">
+    <h1>BATTLE ZONE</h1>
+    <p class="sub">Your gaming portal</p>
+
+    <section id="auth">
+      <h2 id="heading">Login</h2>
+      <form id="authForm">
+        <div id="nameField" class="hidden">
+          <label for="nickname">Nickname</label>
+          <input id="nickname" maxlength="24" autocomplete="nickname" />
+        </div>
+
+        <label for="email">Email address</label>
+        <input id="email" type="email" required
+          autocomplete="email" maxlength="254" />
+
+        <label for="password">Password</label>
+        <input id="password" type="password" required minlength="8"
+          autocomplete="current-password" maxlength="128" />
+
+        <button id="submitBtn" type="submit">Login</button>
+      </form>
+
+      <p class="switch">
+        <span id="switchText">New player?</span>
+        <button id="switchBtn" type="button">Create account</button>
+      </p>
+      <p id="message" role="status" aria-live="polite"></p>
+      <p class="note">
+        Use this site's own account system. Never enter your Free Fire
+        password or game credentials here.
+      </p>
+    </section>
+
+    <section id="dashboard" class="hidden">
+      <h2>Welcome, player!</h2>
+      <p>You are signed in.</p>
+      <p id="playerEmail"></p>
+      <button id="logoutBtn" type="button">Logout</button>
+    </section>
+  </main>
+
+  <script type="module">
+    import { createClient } from
+      "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    // Replace these two placeholders with your Supabase project values.
+    const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
+    const SUPABASE_KEY = "YOUR_SUPABASE_PUBLISHABLE_KEY";
+
+    const auth = document.querySelector("#auth");
+    const dashboard = document.querySelector("#dashboard");
+    const form = document.querySelector("#authForm");
+    const message = document.querySelector("#message");
+    const heading = document.querySelector("#heading");
+    const nameField = document.querySelector("#nameField");
+    const password = document.querySelector("#password");
+    const submitBtn = document.querySelector("#submitBtn");
+
+    let isRegister = false;
+    let supabase;
+
+   try {
+  const SUPABASE_URL = "https://sadqbxrznuygkmgkkgwq.supabase.co";
+  const SUPABASE_KEY = "YOUR_SUPABASE_PUBLISHABLE_KEY";
+
+  if (SUPABASE_URL.startsWith("https://") &&
+      !SUPABASE_URL.includes("YOUR_SUPABASE") &&
+      SUPABASE_KEY &&
+      !SUPABASE_KEY.includes("YOUR_SUPABASE")) {
+    supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+} catch (error) {
+  message.textContent = "Check your Supabase project settings.";
+}
+
+    function showMessage(text) {
+      message.textContent = text;
+    }
+
+    function setMode(register) {
+      isRegister = register;
+      heading.textContent = register ? "Create account" : "Login";
+      submitBtn.textContent = register ? "Register" : "Login";
+      document.querySelector("#switchText").textContent =
+        register ? "Already registered?" : "New player?";
+      document.querySelector("#switchBtn").textContent =
+        register ? "Login" : "Create account";
+      nameField.classList.toggle("hidden", !register);
+      password.autocomplete = register ? "new-password" : "current-password";
+      showMessage("");
+    }
+
+    function showDashboard(user) {
+      auth.classList.add("hidden");
+      dashboard.classList.remove("hidden");
+      document.querySelector("#playerEmail").textContent = user.email || "";
+    }
+
+    function showAuth() {
+      dashboard.classList.add("hidden");
+      auth.classList.remove("hidden");
+    }
+
+    document.querySelector("#switchBtn").addEventListener("click", () => {
+      setMode(!isRegister);
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!supabase) {
+        showMessage("Add your Supabase URL and publishable key first.");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      showMessage("Please wait...");
+
+      const email = document.querySelector("#email").value.trim();
+      const pass = password.value;
+
+      try {
+        if (isRegister) {
+          const nickname =
+            document.querySelector("#nickname").value.trim();
+
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password: pass,
+            options: {
+              data: { nickname: nickname.slice(0, 24) }
+            }
+          });
+
+          if (error) throw error;
+
+          if (data.session) {
+            showDashboard(data.user);
+          } else {
+            showMessage("Registration received. Check your email to confirm your account.");
+          }
+        } else {
+          const { data, error } =
+            await supabase.auth.signInWithPassword({
+              email, password: pass
+            });
+
+          if (error) throw error;
+          showDashboard(data.user);
+        }
+      } catch (error) {
+        // Avoid showing raw backend errors to visitors.
+        showMessage(
+          isRegister
+            ? "Registration failed. Check your details or try again later."
+            : "Login failed. Check your email and password."
+        );
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    document.querySelector("#logoutBtn").addEventListener("click",
+      async () => {
+        if (!supabase) return;
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          showMessage("Logout failed. Please try again.");
+          return;
+        }
+        showAuth();
+        setMode(false);
+      }
+    );
+
+    if (supabase) {
+      supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) showDashboard(session.user);
+        else showAuth();
+      });
+
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session?.user) showDashboard(data.session.user);
+      });
+    }
+  </script>
+</body>
+</html>
